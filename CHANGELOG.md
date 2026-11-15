@@ -4,6 +4,15 @@ All notable changes to the **`@reticlehq/*`** packages are documented here (each
 
 ## [Unreleased]
 
+## [3.10.3] — 2026-11-15
+
+### Fixed
+
+- **`@reticlehq/browser` — a promise rejection the page handled was reported as an uncaught error.** After a Next.js server action that redirects, Reticle reported `NEXT_REDIRECT` as an error. Next.js handles that rejection itself: its listener calls `preventDefault()` and navigates, and the browser console stays clean. Reticle read the rejection before the page's listener ran, so a clean-console check failed on correct code. Reticle now decides after every listener has run, and a rejection the page cancels is not an error. A rejection nobody handles is still reported.
+- **`reticle init` — in a monorepo, init started only the app's own dev script.** For an app in `apps/web`, init ran that app's `vite`. The root `dev` script, which also starts the API, did not run, so every `/api` call from the page failed with `ECONNREFUSED`. Init now runs the root `dev` script from the root when that script starts this app: it runs every workspace package (`turbo`, `nx run-many`, `pnpm -r`), or it names this app. A root script that skips the app leaves the app's own script in place.
+- **`reticle mcp` — at a monorepo root, the agent did not use the daemon of an app in its own repository.** When `init` in `apps/web` replaced the daemon, an agent session at the root still read an older root `.reticle.json` with a different project id. The proxy refused every call, or moved to an empty daemon of its own that no app connected to. The proxy now uses a daemon that runs inside its project folder when the root config names no workspace app. A root config that points at one app still never attaches the agent to a different app. A session that runs an older proxy gets this after you update Reticle and restart the agent session.
+- **`@reticlehq/server` — an agent whose project config named another app was refused with no way forward.** In a monorepo, `init` wired an app, and the agent's MCP server at the repo root refused every call with "the daemon on port 4400 belongs to a different project ... start this project on its own port". The root's `.reticle.json` named a different project than the app's daemon. The refusal was right, and it named neither side, so the agent wrote its own client to get past it. The refusal now names both projects, the folder the daemon serves and the config file, and gives the two ways out: run the agent from the app's folder, or copy the app's `.reticle.json` to the config the agent reads.
+
 ## [3.10.2] — 2026-11-14
 
 ### Fixed
